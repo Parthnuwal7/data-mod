@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Schema Modeler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .sidebar h3 {
+            margin-bottom: 1rem;
+            color: #cccccc;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .json-input {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            margin-bottom: 1rem;
+        }
+        
+        .json-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+            overflow: auto;
+        }
+        
+        .table-node {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            min-width: 200px;
+            cursor: move;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .table-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            border-color: #667eea;
+        }
+        
+        .table-node.selected {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 0.75rem;
+            border-radius: 12px 12px 0 0;
+            font-weight: 600;
+            position: relative;
+        }
+        
+        .table-name {
+            font-size: 0.9rem;
+            word-break: break-word;
+        }
+        
+        .delete-table {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(255, 107, 107, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .table-node:hover .delete-table {
+            opacity: 1;
+        }
+        
+        .table-columns {
+            padding: 0.75rem;
+        }
+        
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .column-item:last-child {
+            border-bottom: none;
+        }
+        
+        .column-name {
+            font-size: 0.85rem;
+            color: #cccccc;
+            flex: 1;
+        }
+        
+        .column-type {
+            font-size: 0.75rem;
+            color: #888;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+        
+        .connection-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .connection-point:hover {
+            transform: scale(1.5);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+        }
+        
+        .connection-point.left {
+            left: -4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .connection-point.right {
+            right: -4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .connection-line {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .connection-line path {
+            stroke: #667eea;
+            stroke-width: 2;
+            fill: none;
+            filter: drop-shadow(0 0 3px rgba(102, 126, 234, 0.5));
+        }
+        
+        .relationship-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .relationship-info h4 {
+            margin-bottom: 0.5rem;
+            color: #cccccc;
+            font-size: 0.9rem;
+        }
+        
+        .relationship-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+        }
+        
+        .relationship-item:last-child {
+            border-bottom: none;
+        }
+        
+        .confidence-badge {
+            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stats {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem;
+            border-radius: 6px;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .minimap-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .minimap-node {
+            position: absolute;
+            background: rgba(102, 126, 234, 0.6);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        
+        .auto-layout-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Data Schema Modeler</h1>
+        <div class="controls">
+            <button class="btn auto-layout-btn" onclick="autoLayout()">Auto Layout</button>
+            <button class="btn export-btn" onclick="exportSchema()">Export JSON</button>
+            <button class="btn btn-secondary" onclick="importSampleData()">Sample Data</button>
+            <button class="btn btn-danger" onclick="clearCanvas()">Clear All</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <h3>Import Schema</h3>
+            <textarea class="json-input" id="jsonInput" placeholder="Paste your JSON schema here..."></textarea>
+            <button class="btn" onclick="loadSchema()">Load Schema</button>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="tableCount">0</div>
+                    <div class="stat-label">Tables</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="relationshipCount">0</div>
+                    <div class="stat-label">Relations</div>
+                </div>
+            </div>
+            
+            <div class="relationship-info">
+                <h4>Relationships</h4>
+                <div id="relationshipsList"></div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas" id="canvas">
+                <!-- Tables and connections will be rendered here -->
+            </div>
+            <div class="minimap">
+                <div class="minimap-content" id="minimapContent">
+                    <!-- Minimap nodes will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        class DataSchemaModeler {
+            constructor() {
+                this.tables = new Map();
+                this.relationships = [];
+                this.selectedTable = null;
+                this.draggedTable = null;
+                this.dragOffset = { x: 0, y: 0 };
+                this.canvas = document.getElementById('canvas');
+                this.minimapContent = document.getElementById('minimapContent');
+                this.currentSchema = null;
+                this.connectionPoints = new Map();
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.loadSampleData();
+            }
+            
+            setupEventListeners() {
+                this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+                this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+                this.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+                
+                // Prevent default drag behavior
+                this.canvas.addEventListener('dragstart', (e) => e.preventDefault());
+            }
+            
+            handleMouseDown(e) {
+                const tableNode = e.target.closest('.table-node');
+                if (tableNode) {
+                    this.draggedTable = tableNode;
+                    const rect = tableNode.getBoundingClientRect();
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    
+                    this.dragOffset.x = e.clientX - rect.left;
+                    this.dragOffset.y = e.clientY - rect.top;
+                    
+                    this.selectTable(tableNode);
+                    e.preventDefault();
+                }
+            }
+            
+            handleMouseMove(e) {
+                if (this.draggedTable) {
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - canvasRect.left - this.dragOffset.x;
+                    const y = e.clientY - canvasRect.top - this.dragOffset.y;
+                    
+                    this.draggedTable.style.left = Math.max(0, Math.min(x, this.canvas.offsetWidth - this.draggedTable.offsetWidth)) + 'px';
+                    this.draggedTable.style.top = Math.max(0, Math.min(y, this.canvas.offsetHeight - this.draggedTable.offsetHeight)) + 'px';
+                    
+                    this.updateConnections();
+                    this.updateMinimap();
+                }
+            }
+            
+            handleMouseUp(e) {
+                this.draggedTable = null;
+            }
+            
+            handleCanvasClick(e) {
+                if (e.target === this.canvas) {
+                    this.deselectAll();
+                }
+            }
+            
+            selectTable(tableNode) {
+                this.deselectAll();
+                this.selectedTable = tableNode;
+                tableNode.classList.add('selected');
+            }
+            
+            deselectAll() {
+                if (this.selectedTable) {
+                    this.selectedTable.classList.remove('selected');
+                    this.selectedTable = null;
+                }
+            }
+            
+            loadSchema() {
+                const input = document.getElementById('jsonInput');
+                try {
+                    const schema = JSON.parse(input.value);
+                    this.currentSchema = schema;
+                    this.renderSchema(schema);
+                    this.showToast('Schema loaded successfully!');
+                } catch (error) {
+                    this.showToast('Invalid JSON format', 'error');
+                }
+            }
+            
+            renderSchema(schema) {
+                this.clearCanvas();
+                
+                if (!schema.relationships || !Array.isArray(schema.relationships)) {
+                    this.showToast('Invalid schema format', 'error');
+                    return;
+                }
+                
+                this.relationships = schema.relationships;
+                
+                // Extract unique tables
+                const tableNames = new Set();
+                schema.relationships.forEach(rel => {
+                    tableNames.add(rel.from_table);
+                    tableNames.add(rel.to_table);
+                });
+                
+                // Create table nodes
+                const tableArray = Array.from(tableNames);
+                tableArray.forEach((tableName, index) => {
+                    this.createTableNode(tableName, index);
+                });
+                
+                // Create connections
+                setTimeout(() => {
+                    this.createConnections();
+                    this.updateRelationshipsList();
+                    this.updateStats();
+                    this.updateMinimap();
+                }, 100);
+            }
+            
+            createTableNode(tableName, index) {
+                const tableNode = document.createElement('div');
+                tableNode.className = 'table-node';
+                tableNode.dataset.tableName = tableName;
+                
+                // Calculate position in a grid layout
+                const cols = Math.ceil(Math.sqrt(this.relationships.length + 1));
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                const x = 50 + col * 250;
+                const y = 50 + row * 200;
+                
+                tableNode.style.left = x + 'px';
+                tableNode.style.top = y + 'px';
+                
+                // Get columns from relationships
+                const columns = this.getTableColumns(tableName);
+                const displayName = this.getDisplayName(tableName);
+                
+                tableNode.innerHTML = `
+                    <div class="table-header">
+                        <div class="table-name">${displayName}</div>
+                        <button class="delete-table" onclick="dataModeler.deleteTable('${tableName}')">×</button>
+                    </div>
+                    <div class="table-columns">
+                        ${columns.map(col => `
+                            <div class="column-item">
+                                <div class="connection-point left" data-table="${tableName}" data-column="${col.name}"></div>
+                                <div class="column-name">${col.name}</div>
+                                <div class="column-type">${col.type}</div>
+                                <div class="connection-point right" data-table="${tableName}" data-column="${col.name}"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                this.canvas.appendChild(tableNode);
+                this.tables.set(tableName, tableNode);
+                
+                // Add connection point event listeners
+                const connectionPoints = tableNode.querySelectorAll('.connection-point');
+                connectionPoints.forEach(point => {
+                    point.addEventListener('click', this.handleConnectionPointClick.bind(this));
+                });
+            }
+            
+            getTableColumns(tableName) {
+                const columns = new Set();
+                
+                this.relationships.forEach(rel => {
+                    if (rel.from_table === tableName) {
+                        columns.add({ name: rel.from_column, type: this.inferColumnType(rel.from_column) });
+                    }
+                    if (rel.to_table === tableName) {
+                        columns.add({ name: rel.to_column, type: this.inferColumnType(rel.to_column) });
+                    }
+                });
+                
+                return Array.from(columns);
+            }
+            
+            inferColumnType(columnName) {
+                const lowerName = columnName.toLowerCase();
+                if (lowerName.includes('id')) return 'ID';
+                if (lowerName.includes('price') || lowerName.includes('amount')) return 'DECIMAL';
+                if (lowerName.includes('date') || lowerName.includes('time')) return 'DATE';
+                if (lowerName.includes('name') || lowerName.includes('title')) return 'STRING';
+                if (lowerName.includes('count') || lowerName.includes('quantity')) return 'INTEGER';
+                return 'STRING';
+            }
+            
+            getDisplayName(tableName) {
+                // Extract readable name from UUID-prefixed filename
+                const parts = tableName.split('_');
+                if (parts.length > 1) {
+                    return parts.slice(1).join('_').replace('.csv', '');
+                }
+                return tableName.replace('.csv', '');
+            }
+            
+            createConnections() {
+                this.relationships.forEach(rel => {
+                    this.createConnection(rel);
+                });
+            }
+            
+            createConnection(relationship) {
+                const fromTable = this.tables.get(relationship.from_table);
+                const toTable = this.tables.get(relationship.to_table);
+                
+                if (!fromTable || !toTable) return;
+                
+                const fromPoint = this.getConnectionPoint(fromTable, relationship.from_column, 'right');
+                const toPoint = this.getConnectionPoint(toTable, relationship.to_column, 'left');
+                
+                if (!fromPoint || !toPoint) return;
+                
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.classList.add('connection-line');
+                svg.style.position = 'absolute';
+                svg.style.pointerEvents = 'none';
+                svg.style.zIndex = '1';
+                
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('stroke', '#667eea');
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('fill', 'none');
+                path.style.filter = 'drop-shadow(0 0 3px rgba(102, 126, 234, 0.5))';
+                
+                svg.appendChild(path);
+                this.canvas.appendChild(svg);
+                
+                this.updateConnectionLine(svg, fromPoint, toPoint);
+            }
+            
+            getConnectionPoint(tableNode, columnName, side) {
+                const columnItems = tableNode.querySelectorAll('.column-item');
+                for (const item of columnItems) {
+                    const columnNameDiv = item.querySelector('.column-name');
+                    if (columnNameDiv && columnNameDiv.textContent === columnName) {
+                        return item.querySelector(`.connection-point.${side}`);
+                    }
+                }
+                return null;
+            }
+            
+            updateConnectionLine(svg, fromPoint, toPoint) {
+                const fromRect = fromPoint.getBoundingClientRect();
+                const toRect = toPoint.getBoundingClientRect();
+                const canvasRect = this.canvas.getBoundingClientRect();
+                
+                const fromX = fromRect.left - canvasRect.left + fromRect.width / 2;
+                const fromY = fromRect.top - canvasRect.top + fromRect.height / 2;
+                const toX = toRect.left - canvasRect.left + toRect.width / 2;
+                const toY = toRect.top - canvasRect.top + toRect.height / 2;
+                
+                const controlX1 = fromX + (toX - fromX) / 3;
+                const controlY1 = fromY;
+                const controlX2 = toX - (toX - fromX) / 3;
+                const controlY2 = toY;
+                
+                const pathData = `M ${fromX} ${fromY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${toX} ${toY}`;
+                
+                svg.querySelector('path').setAttribute('d', pathData);
+                
+                // Update SVG dimensions
+                const minX = Math.min(fromX, toX, controlX1, controlX2) - 10;
+                const maxX = Math.max(fromX, toX, controlX1, controlX2) + 10;
+                const minY = Math.min(fromY, toY, controlY1, controlY2) - 10;
+                const maxY = Math.max(fromY, toY, controlY1, controlY2) + 10;
+                
+                svg.style.left = '0px';
+                svg.style.top = '0px';
+                svg.style.width = '100%';
+                svg.style.height = '100%';
+            }
+            
+            updateConnections() {
+                const connectionLines = this.canvas.querySelectorAll('.connection-line');
+                connectionLines.forEach(line => {
+                    const relationship = this.relationships.find(rel => {
+                        const fromTable = this.tables.get(rel.from_table);
+                        const toTable = this.tables.get(rel.to_table);
+                        const fromPoint = this.getConnectionPoint(fromTable, rel.from_column, 'right');
+                        const toPoint = this.getConnectionPoint(toTable, rel.to_column, 'left');
+                        return fromPoint && toPoint;
+                    });
+                    
+                    if (relationship) {
+                        const fromTable = this.tables.get(relationship.from_table);
+                        const toTable = this.tables.get(relationship.to_table);
+                        const fromPoint = this.getConnectionPoint(fromTable, relationship.from_column, 'right');
+                        const toPoint = this.getConnectionPoint(toTable, relationship.to_column, 'left');
+                        
+                        if (fromPoint && toPoint) {
+                            this.updateConnectionLine(line, fromPoint, toPoint);
+                        }
+                    }
+                });
+            }
+            
+            updateRelationshipsList() {
+                const list = document.getElementById('relationshipsList');
+                list.innerHTML = this.relationships.map(rel => `
+                    <div class="relationship-item">
+                        <div>
+                            <strong>${this.getDisplayName(rel.from_table)}</strong>.${rel.from_column} →
+                            <strong>${this.getDisplayName(rel.to_table)}</strong>.${rel.to_column}
+                        </div>
+                        <div class="confidence-badge">${(rel.confidence * 100).toFixed(0)}%</div>
+                    </div>
+                `).join('');
+            }
+            
+            updateStats() {
+                document.getElementById('tableCount').textContent = this.tables.size;
+                document.getElementById('relationshipCount').textContent = this.relationships.length;
+            }
+            
+            updateMinimap() {
+                this.minimapContent.innerHTML = '';
+                
+                if (this.tables.size === 0) return;
+                
+                const canvasRect = this.canvas.getBoundingClientRect();
+                const minimapRect = this.minimapContent.getBoundingClientRect();
+                
+                const scaleX = minimapRect.width / canvasRect.width;
+                const scaleY = minimapRect.height / canvasRect.height;
+                
+                this.tables.forEach((tableNode, tableName) => {
+                    const rect = tableNode.getBoundingClientRect();
+                    const minimapNode = document.createElement('div');
+                    minimapNode.className = 'minimap-node';
+                    minimapNode.style.left = (rect.left - canvasRect.left) * scaleX + 'px';
+                    minimapNode.style.top = (rect.top - canvasRect.top) * scaleY + 'px';
+                    minimapNode.style.width = rect.width * scaleX + 'px';
+                    minimapNode.style.height = rect.height * scaleY + 'px';
+                    minimapNode.title = this.getDisplayName(tableName);
+                    
+                    this.minimapContent.appendChild(minimapNode);
+                });
+            }
+            
+            deleteTable(tableName) {
+                if (confirm(`Are you sure you want to delete table "${this.getDisplayName(tableName)}"?`)) {
+                    // Remove table node
+                    const tableNode = this.tables.get(tableName);
+                    if (tableNode) {
+                        tableNode.remove();
+                        this.tables.delete(tableName);
+                    }
+                    
+                    // Remove related relationships
+                    this.relationships = this.relationships.filter(rel => 
+                        rel.from_table !== tableName && rel.to_table !== tableName
+                    );
+                    
+                    // Remove connection lines
+                    const connectionLines = this.canvas.querySelectorAll('.connection-line');
+                    connectionLines.forEach(line => line.remove());
+                    
+                    // Recreate connections
+                    this.createConnections();
+                    this.updateRelationshipsList();
+                    this.updateStats();
+                    this.updateMinimap();
+                    this.showToast('Table deleted successfully!');
+                }
+            }
+            
+            autoLayout() {
+                if (this.tables.size === 0) return;
+                
+                const tableArray = Array.from(this.tables.values());
+                const centerX = this.canvas.offsetWidth / 2;
+                const centerY = this.canvas.offsetHeight / 2;
+                const radius = Math.min(centerX, centerY) - 150;
+                
+                tableArray.forEach((tableNode, index) => {
+                    const angle = (index * 2 * Math.PI) / tableArray.length;
+                    const x = centerX + radius * Math.cos(angle) - tableNode.offsetWidth / 2;
+                    const y = centerY + radius * Math.sin(angle) - tableNode.offsetHeight / 2;
+                    
+                    // Animate to new position
+                    tableNode.style.transition = 'all 0.5s ease';
+                    tableNode.style.left = Math.max(0, Math.min(x, this.canvas.offsetWidth - tableNode.offsetWidth)) + 'px';
+                    tableNode.style.top = Math.max(0, Math.min(y, this.canvas.offsetHeight - tableNode.offsetHeight)) + 'px';
+                });
+                
+                setTimeout(() => {
+                    this.updateConnections();
+                    this.updateMinimap();
+                    // Remove transition after animation
+                    tableArray.forEach(tableNode => {
+                        tableNode.style.transition = '';
+                    });
+                }, 500);
+                
+                this.showToast('Auto layout applied!');
+            }
+            
+            exportSchema() {
+                const schema = {
+                    relationships: this.relationships,
+                    created_at: new Date().toISOString(),
+                    version: this.currentSchema?.version || "modified",
+                    metadata: {
+                        tables: Array.from(this.tables.keys()),
+                        total_tables: this.tables.size,
+                        total_relationships: this.relationships.length
+                    }
+                };
+                
+                const jsonString = JSON.stringify(schema, null, 2);
+                
+                // Create download link
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `data-schema-${new Date().getTime()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showToast('Schema exported successfully!');
+            }
+            
+            clearCanvas() {
+                this.canvas.innerHTML = '';
+                this.tables.clear();
+                this.relationships = [];
+                this.selectedTable = null;
+                this.updateRelationshipsList();
+                this.updateStats();
+                this.updateMinimap();
+            }
+            
+            loadSampleData() {
+                const sampleSchema = {
+                    "relationships": [
+                        {
+                            "from_table": "01373b90-9aa1-4732-8d3f-5df530d961ff_orders.csv",
+                            "from_column": "customer_id",
+                            "to_table": "dacf6f1f-df6e-43b9-9c8e-a033e0368a34_customers.csv",
+                            "to_column": "customer_id",
+                            "confidence": 1.0
+                        },
+                        {
+                            "from_table": "752a988e-fece-42f4-8757-54ba7f553d40_order_items.csv",
+                            "from_column": "order_id",
+                            "to_table": "01373b90-9aa1-4732-8d3f-5df530d961ff_orders.csv",
+                            "to_column": "order_id",
+                            "confidence": 1.0
+                        },
+                        {
+                            "from_table": "752a988e-fece-42f4-8757-54ba7f553d40_order_items.csv",
+                            "from_column": "product_id",
+                            "to_table": "9bdded00-2c07-4859-a4db-1e09c54eba0e_products.csv",
+                            "to_column": "product_id",
+                            "confidence": 1.0
+                        },
+                        {
+                            "from_table": "752a988e-fece-42f4-8757-54ba7f553d40_order_items.csv",
+                            "from_column": "unit_price",
+                            "to_table": "9bdded00-2c07-4859-a4db-1e09c54eba0e_products.csv",
+                            "to_column": "price",
+                            "confidence": 1.0
+                        }
+                    ],
+                    "created_at": "2025-07-15T11:26:57.984604",
+                    "version": "initial"
+                };
+                
+                document.getElementById('jsonInput').value = JSON.stringify(sampleSchema, null, 2);
+                this.currentSchema = sampleSchema;
+                this.renderSchema(sampleSchema);
+            }
+            
+            handleConnectionPointClick(e) {
+                const point = e.target;
+                const table = point.dataset.table;
+                const column = point.dataset.column;
+                
+                if (this.selectedConnectionPoint) {
+                    // Create new relationship
+                    if (this.selectedConnectionPoint.table !== table) {
+                        const newRelationship = {
+                            from_table: this.selectedConnectionPoint.table,
+                            from_column: this.selectedConnectionPoint.column,
+                            to_table: table,
+                            to_column: column,
+                            confidence: 1.0
+                        };
+                        
+                        this.relationships.push(newRelationship);
+                        this.createConnection(newRelationship);
+                        this.updateRelationshipsList();
+                        this.updateStats();
+                        this.showToast('Relationship created!');
+                    }
+                    
+                    // Clear selection
+                    this.selectedConnectionPoint.element.style.background = '#667eea';
+                    this.selectedConnectionPoint = null;
+                } else {
+                    // Select connection point
+                    this.selectedConnectionPoint = {
+                        element: point,
+                        table: table,
+                        column: column
+                    };
+                    point.style.background = '#ff6b6b';
+                }
+                
+                e.stopPropagation();
+            }
+            
+            showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.add('show');
+                
+                if (type === 'error') {
+                    toast.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)';
+                } else {
+                    toast.style.background = 'linear-gradient(135deg, #43cea2 0%, #185a9d 100%)';
+                }
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+            
+            showLoading() {
+                document.getElementById('loading').classList.add('show');
+            }
+            
+            hideLoading() {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+        
+        // Initialize the application
+        const dataModeler = new DataSchemaModeler();
+        
+        // Global functions for button clicks
+        function loadSchema() {
+            dataModeler.loadSchema();
+        }
+        
+        function autoLayout() {
+            dataModeler.autoLayout();
+        }
+        
+        function exportSchema() {
+            dataModeler.exportSchema();
+        }
+        
+        function importSampleData() {
+            dataModeler.loadSampleData();
+        }
+        
+        function clearCanvas() {
+            if (confirm('Are you sure you want to clear all tables and relationships?')) {
+                dataModeler.clearCanvas();
+                dataModeler.showToast('Canvas cleared!');
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 's':
+                        e.preventDefault();
+                        exportSchema();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        autoLayout();
+                        break;
+                    case 'Delete':
+                    case 'Backspace':
+                        if (dataModeler.selectedTable) {
+                            const tableName = dataModeler.selectedTable.dataset.tableName;
+                            dataModeler.deleteTable(tableName);
+                        }
+                        break;
+                }
+            }
+        });
+        
+        // Add responsive behavior
+        window.addEventListener('resize', () => {
+            dataModeler.updateConnections();
+            dataModeler.updateMinimap();
+        });
+        
+        // Add context menu for advanced options
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('.table-node')) {
+                e.preventDefault();
+                // You can add context menu here for advanced options
+            }
+        });
+        
+        // Add zoom functionality
+        let scale = 1;
+        const canvas = document.getElementById('canvas');
+        
+        canvas.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                scale *= delta;
+                scale = Math.max(0.5, Math.min(2, scale));
+                canvas.style.transform = `scale(${scale})`;
+            }
+        });
+        
+        // Add pan functionality
+        let isPanning = false;
+        let panStart = { x: 0, y: 0 };
+        let panOffset = { x: 0, y: 0 };
+        
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { // Middle mouse or Ctrl+Click
+                isPanning = true;
+                panStart.x = e.clientX - panOffset.x;
+                panStart.y = e.clientY - panOffset.y;
+                canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isPanning) {
+                panOffset.x = e.clientX - panStart.x;
+                panOffset.y = e.clientY - panStart.y;
+                canvas.style.transformOrigin = '0 0';
+                canvas.style.transform = `scale(${scale}) translate(${panOffset.x}px, ${panOffset.y}px)`;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isPanning = false;
+            canvas.style.cursor = 'default';
+        });
+        
+        // Add search functionality
+        function addSearchBar() {
+            const searchContainer = document.createElement('div');
+            searchContainer.style.cssText = `
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                z-index: 1000;
+            `;
+            
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Search tables...';
+            searchInput.style.cssText = `
+                background: transparent;
+                border: none;
+                color: white;
+                outline: none;
+                font-size: 14px;
+                width: 200px;
+            `;
+            
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                dataModeler.tables.forEach((tableNode, tableName) => {
+                    const displayName = dataModeler.getDisplayName(tableName).toLowerCase();
+                    if (displayName.includes(query)) {
+                        tableNode.style.opacity = '1';
+                        tableNode.style.transform = 'scale(1)';
+                    } else {
+                        tableNode.style.opacity = '0.3';
+                        tableNode.style.transform = 'scale(0.95)';
+                    }
+                });
+            });
+            
+            searchContainer.appendChild(searchInput);
+            document.querySelector('.canvas-container').appendChild(searchContainer);
+        }
+        
+        // Initialize search bar
+        addSearchBar();
+    </script>
+</body>
+</html>
